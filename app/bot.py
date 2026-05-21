@@ -7,6 +7,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message, Update, User
 
 from app.config import Settings
+from app.github_client import GitHubService
 from app.openai_client import OpenAIService
 from app.prompts import COMMAND_HELP
 from app.storage import RateLimiter, Storage, compact_summary
@@ -16,16 +17,18 @@ router = Router()
 STARTED_AT = datetime.now(timezone.utc)
 storage: Storage | None = None
 openai_service: OpenAIService | None = None
+github_service: GitHubService | None = None
 settings: Settings | None = None
 rate_limiter = RateLimiter(max_requests=5, window_seconds=60)
 
 
 def create_bot_and_dispatcher(app_settings: Settings) -> tuple[Bot, Dispatcher]:
-    global storage, openai_service, settings
+    global storage, openai_service, github_service, settings
     settings = app_settings
     storage = Storage(app_settings.database_url)
     storage.connect()
     openai_service = OpenAIService(app_settings.openai_api_key, app_settings.openai_model)
+    github_service = GitHubService(app_settings.github_token, app_settings.github_repo)
 
     bot = Bot(token=app_settings.telegram_bot_token, default=DefaultBotProperties(parse_mode="HTML"))
     dispatcher = Dispatcher()
@@ -101,6 +104,44 @@ async def cmd_status(message: Message) -> None:
             ]
         )
     )
+
+
+@router.message(Command("task"))
+async def cmd_task(message: Message, command: CommandObject) -> None:
+    await remember_user(message)
+    if not is_admin(message.from_user):
+        await message.answer("Команда /task доступна только администратору.")
+        return
+
+    task_text = (command.args or "").strip()
+    if not task_text:
+        await message.answer("Напишите задачу после /task. Например: /task добавь команду экспорта истории")
+        return
+
+    assert github_service is not None and settings is not None
+    if not github_service.configured:
+        await message.answer("GitHub bridge не настроен. Добавьте GITHUB_TOKEN и GITHUB_REPO в Vercel.")
+        return
+
+    username = message.from_user.username if message.from_user else None
+    body = (
+        "Task created from Telegram for Cursor/Background Agent.\n\n"
+        f"From: @{username or 'unknown'}\n"
+        f"Chat ID: {message.chat.id}\n\n"
+        "Request:\n"
+        f"{task_text}\n\n"
+        "Suggested workflow:\n"
+        "- Open this issue in Cursor or assign it to a Cursor Background Agent.\n"
+        "- Implement in a branch and open a pull request.\n"
+    )
+    title = f"Cursor task: {task_text.splitlines()[0][:80]}"
+    try:
+        issue_url = await github_service.create_issue(title=title, body=body)
+    except Exception as exc:
+        await message.answer(f"Не получилось создать GitHub issue: {escape(str(exc))}")
+        return
+
+    await message.answer(f"Задача создана для Cursor:\n{issue_url}")
 
 
 @router.message(F.text)

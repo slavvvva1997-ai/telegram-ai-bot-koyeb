@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite:///bot.db", alias="DATABASE_URL")
     openai_model: str = Field(default="gpt-5-mini", alias="OPENAI_MODEL")
     admin_telegram_ids: str = Field(default="", alias="ADMIN_TELEGRAM_IDS")
+    github_token: str = Field(default="", alias="GITHUB_TOKEN")
+    github_repo: str = Field(default="", alias="GITHUB_REPO")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

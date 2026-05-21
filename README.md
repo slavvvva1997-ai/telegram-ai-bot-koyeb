@@ -11,6 +11,7 @@
 - `/docs вопрос` - помощь по документам в Чехии
 - `/help` - список команд
 - `/status` - статус, только для админа из `ADMIN_TELEGRAM_IDS`
+- `/task задача` - создать GitHub issue для Cursor, только для админа
 
 В группах бот экономит токены и отвечает только на команды, упоминание бота или ответ на сообщение бота. Сообщения других ботов игнорируются.
 
@@ -33,9 +34,12 @@ PUBLIC_URL=https://your-app.vercel.app
 DATABASE_URL=sqlite:///bot.db
 OPENAI_MODEL=gpt-5-mini
 ADMIN_TELEGRAM_IDS=123456789
+GITHUB_REPO=slavvvva1997-ai/telegram-ai-bot-koyeb
+GITHUB_TOKEN=your_github_token_with_issues_write_access
 ```
 
 `ADMIN_TELEGRAM_IDS` - ваш Telegram user id или username. Можно указать несколько через запятую: `111,222,@viacheslav379`.
+`GITHUB_REPO` и `GITHUB_TOKEN` нужны для команды `/task`, чтобы с телефона создавать GitHub issues для Cursor.
 
 Важно: не коммитьте `.env`. В репозитории должен быть только `.env.example`.
 
@@ -151,6 +155,7 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
 2. Отправьте `/start`.
 3. Отправьте `/ask Придумай план на день`.
 4. Для проверки статуса отправьте `/status` с аккаунта, id которого указан в `ADMIN_TELEGRAM_IDS`.
+5. Для задачи Cursor отправьте `/task добавь новую команду в бота`. Бот создаст GitHub issue.
 
 ## 10. GitHub и Codex Cloud с телефона
 
@@ -159,6 +164,10 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
 3. Codex Cloud меняет код в GitHub.
 4. Vercel автоматически redeploy-ит сервис после push в основную ветку, если включен auto deploy.
 5. Бот продолжает работать в облаке независимо от домашнего компьютера.
+
+## 11. Cursor с телефона
+
+Команда `/task` создает GitHub issue в репозитории проекта. Дальше можно открыть issue в Cursor или запустить Cursor Background Agent для этого repo. Так телефон становится входной точкой для задач, а Cursor получает их через GitHub.
 
 ## Безопасность и лимиты
 
