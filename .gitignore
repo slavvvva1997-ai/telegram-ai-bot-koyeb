@@ -10,3 +10,4 @@ build/
 *.pyc
 
 .vercel
+.webhook_secret.local
