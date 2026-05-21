@@ -1,0 +1,140 @@
+name: Codex Telegram Task
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Task for Codex
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  codex:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.issue.labels.*.name, 'cursor-task')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Prepare task
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            cat > /tmp/codex-task.md <<'EOF'
+          ${{ inputs.task }}
+          EOF
+            echo "TASK_TITLE=Manual Telegram/Codex task" >> "$GITHUB_ENV"
+            echo "ISSUE_NUMBER=" >> "$GITHUB_ENV"
+          else
+            cat > /tmp/codex-task.md <<'EOF'
+          ${{ github.event.issue.body }}
+          EOF
+            echo "TASK_TITLE=${{ github.event.issue.title }}" >> "$GITHUB_ENV"
+            echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Create branch
+        shell: bash
+        run: |
+          if [ -n "$ISSUE_NUMBER" ]; then
+            BRANCH="codex/issue-$ISSUE_NUMBER"
+          else
+            BRANCH="codex/manual-${{ github.run_id }}"
+          fi
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          git checkout -b "$BRANCH"
+
+      - name: Run Codex
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
+        run: |
+          cat > /tmp/codex-prompt.md <<'EOF'
+          You are running inside GitHub Actions as Codex.
+
+          Implement the requested code change in this repository.
+          Keep the change focused, run relevant tests, and do not edit secrets.
+          If the request is unclear, make a conservative implementation and document assumptions.
+
+          Task:
+          EOF
+          cat /tmp/codex-task.md >> /tmp/codex-prompt.md
+
+          npx -y @openai/codex exec \
+            --dangerously-bypass-approvals-and-sandbox \
+            --sandbox danger-full-access \
+            --ask-for-approval never \
+            --output-last-message /tmp/codex-result.md \
+            - < /tmp/codex-prompt.md
+
+      - name: Commit changes
+        id: commit
+        shell: bash
+        run: |
+          git status --short
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "codex-telegram-bot"
+          git config user.email "codex-telegram-bot@users.noreply.github.com"
+          git add .
+          git commit -m "Codex task: $TASK_TITLE"
+          git push origin "$BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          BODY_FILE=/tmp/pr-body.md
+          {
+            echo "Implemented by Codex from Telegram task."
+            echo
+            if [ -n "$ISSUE_NUMBER" ]; then
+              echo "Closes #$ISSUE_NUMBER"
+              echo
+            fi
+            echo "## Codex result"
+            cat /tmp/codex-result.md || true
+          } > "$BODY_FILE"
+
+          gh pr create \
+            --title "Codex task: $TASK_TITLE" \
+            --body-file "$BODY_FILE" \
+            --base main \
+            --head "$BRANCH"
+
+      - name: Comment when no changes
+        if: steps.commit.outputs.changed == 'false' && env.ISSUE_NUMBER != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Codex ran, but did not produce code changes."
