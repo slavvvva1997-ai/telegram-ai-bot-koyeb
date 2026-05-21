@@ -72,6 +72,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
+          printenv OPENAI_API_KEY | npx -y @openai/codex login --with-api-key
+
           cat > /tmp/codex-prompt.md <<'EOF'
           You are running inside GitHub Actions as Codex.
 
@@ -86,6 +88,7 @@ jobs:
           npx -y @openai/codex exec \
             --dangerously-bypass-approvals-and-sandbox \
             --sandbox danger-full-access \
+            --model gpt-5-mini \
             --output-last-message /tmp/codex-result.md \
             - < /tmp/codex-prompt.md
 
