@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 from collections import defaultdict, deque
 from dataclasses import dataclass
@@ -60,6 +61,8 @@ class Storage:
         db_path = parsed.path.lstrip("/") if parsed.scheme == "sqlite" else "bot.db"
         if db_path in ("", ":memory:"):
             db_path = ":memory:"
+        elif os.getenv("VERCEL") and not Path(db_path).is_absolute():
+            db_path = str(Path("/tmp") / Path(db_path).name)
         else:
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
