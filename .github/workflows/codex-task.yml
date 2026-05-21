@@ -86,7 +86,6 @@ jobs:
           npx -y @openai/codex exec \
             --dangerously-bypass-approvals-and-sandbox \
             --sandbox danger-full-access \
-            -a never \
             --output-last-message /tmp/codex-result.md \
             - < /tmp/codex-prompt.md
 
