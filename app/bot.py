@@ -4,7 +4,7 @@ from html import escape
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message, Update
+from aiogram.types import Message, Update, User
 
 from app.config import Settings
 from app.openai_client import OpenAIService
@@ -81,7 +81,7 @@ async def cmd_docs(message: Message, command: CommandObject) -> None:
 @router.message(Command("status"))
 async def cmd_status(message: Message) -> None:
     await remember_user(message)
-    if not is_admin(message.from_user.id if message.from_user else None):
+    if not is_admin(message.from_user):
         await message.answer("Команда /status доступна только администратору.")
         return
 
@@ -159,7 +159,14 @@ async def remember_user(message: Message) -> None:
     storage.ensure_chat(message.chat.id)
 
 
-def is_admin(user_id: int | None) -> bool:
-    if user_id is None or settings is None:
+def is_admin(user: User | None) -> bool:
+    if user is None or settings is None:
         return False
-    return user_id in settings.admin_ids
+    if user.id in settings.admin_ids:
+        return True
+    allowed_usernames = {
+        item.strip().lstrip("@").lower()
+        for item in settings.admin_telegram_ids.split(",")
+        if item.strip() and not item.strip().isdigit()
+    }
+    return bool(user.username and user.username.lower() in allowed_usernames)

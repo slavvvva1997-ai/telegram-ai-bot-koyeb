@@ -35,7 +35,7 @@ OPENAI_MODEL=gpt-5-mini
 ADMIN_TELEGRAM_IDS=123456789
 ```
 
-`ADMIN_TELEGRAM_IDS` - ваш Telegram user id. Можно указать несколько через запятую: `111,222`.
+`ADMIN_TELEGRAM_IDS` - ваш Telegram user id или username. Можно указать несколько через запятую: `111,222,@viacheslav379`.
 
 Важно: не коммитьте `.env`. В репозитории должен быть только `.env.example`.
 
