@@ -1,6 +1,6 @@
 # Telegram AI Bot 24/7
 
-Облачный Telegram AI-бот на Python 3.11+, FastAPI, aiogram 3.x и OpenAI API. Бот работает через webhook, поэтому его можно держать на Koyeb Free Instance, а домашний компьютер может быть выключен.
+Облачный Telegram AI-бот на Python 3.11+, FastAPI, aiogram 3.x и OpenAI API. Бот работает через webhook, поэтому его можно держать на бесплатном serverless-хостинге Vercel Hobby, а домашний компьютер может быть выключен.
 
 ## Что умеет бот
 
@@ -29,7 +29,7 @@
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 OPENAI_API_KEY=your_openai_api_key
 WEBHOOK_SECRET=random_secret_string
-PUBLIC_URL=https://your-app.koyeb.app
+PUBLIC_URL=https://your-app.vercel.app
 DATABASE_URL=sqlite:///bot.db
 OPENAI_MODEL=gpt-5-mini
 ADMIN_TELEGRAM_IDS=123456789
@@ -71,24 +71,25 @@ curl http://localhost:8000/health
 {"status":"ok"}
 ```
 
-## 4. Бесплатный deploy на Koyeb
+## 4. Бесплатный deploy на Vercel
 
-Koyeb - основной бесплатный вариант для этого проекта: Docker deploy из GitHub, публичный HTTPS-домен и Free Instance для hobby-проекта.
+Vercel Hobby - основной бесплатный вариант для этого проекта: FastAPI официально поддерживается, webhook запускается как serverless function, а сервис не требует постоянно включенного домашнего компьютера.
 
-Важное ограничение free-тарифа: Koyeb Free Instance может засыпать после 1 часа без входящего трафика. Это подходит для бесплатного старта, но не является гарантированным production 24/7.
+Важные ограничения free-тарифа: это вариант для personal/hobby-проектов, есть лимиты на количество вызовов и длительность функций. Для Telegram-бота с умеренным трафиком этого достаточно для старта.
 
 1. Загрузите проект в GitHub.
-2. Откройте Koyeb и создайте новый App.
+2. Откройте Vercel и создайте новый Project.
 3. Выберите GitHub repository.
-4. В build/deploy настройках выберите Dockerfile.
-5. Выберите Free Instance, если он доступен.
+4. Vercel увидит `app.py` и `vercel.json`.
+5. Framework Preset можно оставить `Other`.
 6. Добавьте переменные окружения из раздела выше.
-7. После deploy скопируйте публичный домен вида `https://your-app.koyeb.app`.
-8. Укажите этот домен в `PUBLIC_URL`.
-9. Проверьте healthcheck:
+7. Нажмите Deploy.
+8. После deploy скопируйте публичный домен вида `https://your-app.vercel.app`.
+9. Укажите этот домен в `PUBLIC_URL`.
+10. Проверьте healthcheck:
 
 ```bash
-curl https://your-app.koyeb.app/health
+curl https://your-app.vercel.app/health
 ```
 
 Ожидаемый ответ:
@@ -97,9 +98,13 @@ curl https://your-app.koyeb.app/health
 {"status":"ok"}
 ```
 
-На бесплатном хостинге SQLite-память может сбрасываться при redeploy. Это не ломает бота, но он потеряет короткую историю диалогов. Если Koyeb даст PostgreSQL или вы подключите внешний PostgreSQL, используйте его URL в `DATABASE_URL`.
+На serverless-хостинге SQLite-память не подходит для надежного долгого хранения: файл может сбрасываться между деплоями и холодными стартами. Это не ломает бота, но он может потерять короткую историю диалогов. Для устойчивой памяти подключите внешний PostgreSQL и используйте его URL в `DATABASE_URL`.
 
-## 5. Deploy на Render
+## 5. Deploy на Koyeb
+
+Koyeb технически подходит для Docker deploy, но в некоторых аккаунтах при onboarding может потребовать billing/Pro plan. Если Free Instance доступен, используйте Dockerfile deploy из GitHub и переменные окружения из раздела выше.
+
+## 6. Deploy на Render
 
 1. Загрузите проект в GitHub.
 2. На Render создайте `New Web Service`.
@@ -111,7 +116,7 @@ curl https://your-app.koyeb.app/health
 
 Для free plan Render сервис может засыпать. Для настоящей работы 24/7 нужен paid instance или хостинг без sleep.
 
-## 6. Deploy на Railway
+## 7. Deploy на Railway
 
 1. Загрузите проект в GitHub.
 2. В Railway создайте новый проект из GitHub repo.
@@ -120,7 +125,7 @@ curl https://your-app.koyeb.app/health
 5. Убедитесь, что порт берется из Docker/uvicorn и сервис доступен по публичному домену.
 6. Укажите этот домен в `PUBLIC_URL`.
 
-## 7. Установка webhook
+## 8. Установка webhook
 
 После deploy выполните:
 
@@ -140,19 +145,19 @@ curl "https://api.telegram.org/bot123:ABC/setWebhook?url=https://your-app.onrend
 curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
 ```
 
-## 8. Проверка в Telegram
+## 9. Проверка в Telegram
 
 1. Откройте своего бота в Telegram.
 2. Отправьте `/start`.
 3. Отправьте `/ask Придумай план на день`.
 4. Для проверки статуса отправьте `/status` с аккаунта, id которого указан в `ADMIN_TELEGRAM_IDS`.
 
-## 9. GitHub и Codex Cloud с телефона
+## 10. GitHub и Codex Cloud с телефона
 
 1. Храните код в GitHub.
 2. С телефона создавайте issue, pull request или задачу для Codex Cloud.
 3. Codex Cloud меняет код в GitHub.
-4. Koyeb автоматически redeploy-ит сервис после push в основную ветку, если включен auto deploy.
+4. Vercel автоматически redeploy-ит сервис после push в основную ветку, если включен auto deploy.
 5. Бот продолжает работать в облаке независимо от домашнего компьютера.
 
 ## Безопасность и лимиты
